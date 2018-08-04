@@ -5,13 +5,23 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using GoshenJimenez.MercadiaII.Web.Models;
+using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Helpers;
 
 namespace GoshenJimenez.MercadiaII.Web.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly DefaultDbContext _context;
+
+        public HomeController(DefaultDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Index()
         {
+            var users = this._context.Users.ToList();
+
             return View();
         }
 
