@@ -1,4 +1,6 @@
-﻿@{
+﻿@using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Models;
+@model GoshenJimenez.MercadiaII.Web.ViewModels.Users.IndexViewModel;
+@{
     ViewData["Title"] = "Home Page";
 }
 
@@ -55,10 +57,13 @@
 
 <div class="row">
     <div class="col-md-3">
-        <h2>Application uses</h2>
+        <h2>Users</h2>
         <ul>
-            <li>Sample pages using ASP.NET Core MVC</li>
-            <li>Theming using <a href="https://go.microsoft.com/fwlink/?LinkID=398939">Bootstrap</a></li>
+            @{foreach(User user in Model.Users)
+                {
+                <li>@user.FullName    @user.Gender.ToString()  @user.EmailAddress</li>
+                }
+             }
         </ul>
     </div>
     <div class="col-md-3">

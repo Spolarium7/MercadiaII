@@ -4,8 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using GoshenJimenez.MercadiaII.Web.Models;
 using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Helpers;
+using GoshenJimenez.MercadiaII.Web.ViewModels.Users;
+using GoshenJimenez.MercadiaII.Web.Models;
 
 namespace GoshenJimenez.MercadiaII.Web.Controllers
 {
@@ -20,9 +21,10 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
 
         public IActionResult Index()
         {
-            var users = this._context.Users.ToList();
-
-            return View();
+            return View(new IndexViewModel()
+            {
+                Users = this._context.Users.ToList()
+            });
         }
 
         public IActionResult About()
