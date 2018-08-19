@@ -30,14 +30,14 @@
                             @{
                                 if (user.LoginStatus == GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Enums.LoginStatus.Active)
                                 {
-                                    <a href="#" onclick="confirmDeactivateAccount()" title="Deactivate Account"><button type="button" class="btn"><i class="fas fa-lock"></i></button></a>
+                                    <a href="#" onclick="confirmDeactivateAccount('@user.Id', '@user.FullName')" title="Deactivate Account"><button type="button" class="btn"><i class="fas fa-lock"></i></button></a>
                                 }
                                 else
                                 {
-                                    <a href="#" onclick="confirmActivateAccount()" title="Activate Account"><button type="button" class="btn"><i class="fas fa-lock-open"></i></button></a>
+                                    <a href="#" onclick="confirmActivateAccount('@user.Id', '@user.FullName')" title="Activate Account"><button type="button" class="btn"><i class="fas fa-lock-open"></i></button></a>
                                 }
                             }
-                            <a href="#" onclick="confirmDeleteUser()" title="Delete User"><button type="button" class="btn"><i class="fas fa-times"></i></button></a>
+                            <a href="#" onclick="confirmDeleteUser('@user.Id', '@user.FullName')" title="Delete User"><button type="button" class="btn"><i class="fas fa-times"></i></button></a>
                         </td>
                     </tr>
                 }
@@ -84,6 +84,45 @@
     </div>
 </div>
 
+<div class="modal" tabindex="-1" role="dialog" id="modal-account-status">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><span class="modal-account-status-label"></span> Account</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to <span class="modal-account-status-label"></span> the account of <span id="modal-account-status-username"></span>?</p>
+            </div>
+            <div class="modal-footer">
+                <a href="#" id="modal-account-status-confirm"><button type="button" class="btn btn-primary"><span class="modal-account-status-label"></span> Account</button></a>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" tabindex="-1" role="dialog" id="modal-delete-user">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <span id="modal-delete-user-username"></span>?</p>
+            </div>
+            <div class="modal-footer">
+                <a href="#" id="modal-delete-user-confirm"><button type="button" class="btn btn-primary">Reset Password</button></a>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section pageScripts{
 <script type="text/javascript">
@@ -91,6 +130,26 @@
         $("#modal-reset-password-username").html(userName);
         $("#modal-reset-password-confirm").attr("href", "/home/reset-password/" + userId);
         $("#modal-reset-password").modal("show");
+    }
+
+    function confirmActivateAccount(userId, userName) {
+        $("#modal-account-status-username").html(userName);
+        $(".modal-account-status-label").html("Activate");
+        $("#modal-account-status-confirm").attr("href", "/home/change-status/activate/" + userId);
+        $("#modal-account-status").modal("show");
+    }
+
+    function confirmDeactivateAccount(userId, userName) {
+        $("#modal-account-status-username").html(userName);
+        $(".modal-account-status-label").html("Deactivate");
+        $("#modal-account-status-confirm").attr("href", "/home/change-status/deactivate/" + userId);
+        $("#modal-account-status").modal("show");
+    }
+
+    function confirmDeleteUser(userId, userName) {
+        $("#modal-delete-user-username").html(userName);
+        $("#modal-delete-user-confirm").attr("href", "/home/delete/" + userId);
+        $("#modal-delete-user").modal("show");
     }
 </script>
 }
