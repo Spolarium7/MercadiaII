@@ -25,7 +25,7 @@
                         <td>@user.EmailAddress</td>
                         <td>@user.Gender</td>
                         <td>
-                            <a href="#" onclick="confirmResetPassword()" title="Reset Password"><button type="button" class="btn"><i class="fas fa-key"></i></button></a>
+                            <a href="#" onclick="confirmResetPassword('@user.Id', '@user.FullName')" title="Reset Password"><button type="button" class="btn"><i class="fas fa-key"></i></button></a>
                             <a href="~/home/update-profile?userId=@user.Id" title="Update Profile"><button type="button" class="btn"><i class="fas fa-pen-square"></i></button></a>
                             @{
                                 if (user.LoginStatus == GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Enums.LoginStatus.Active)
@@ -64,3 +64,33 @@
     </table>
 </div>
 
+<div class="modal" tabindex="-1" role="dialog" id="modal-reset-password">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reset Password</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to reset the password of <span id="modal-reset-password-username"></span>?</p>
+            </div>
+            <div class="modal-footer">
+                <a href="#" id="modal-reset-password-confirm"><button type="button" class="btn btn-primary">Reset Password</button></a>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section pageScripts{
+<script type="text/javascript">
+    function confirmResetPassword(userId, userName) {
+        $("#modal-reset-password-username").html(userName);
+        $("#modal-reset-password-confirm").attr("href", "/home/reset-password/" + userId);
+        $("#modal-reset-password").modal("show");
+    }
+</script>
+}
