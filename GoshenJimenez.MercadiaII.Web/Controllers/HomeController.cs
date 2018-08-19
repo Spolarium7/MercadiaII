@@ -87,6 +87,20 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
               .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
+        [HttpGet, Route("home/delete/{userId}")]
+        public IActionResult Delete(Guid? userId)
+        {
+            var user = this._context.Users.FirstOrDefault(u => u.Id == userId);
+
+            if (user != null)
+            {
+                this._context.Users.Remove(user);
+                this._context.SaveChanges();
+            }
+
+            return RedirectToAction("index");
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
