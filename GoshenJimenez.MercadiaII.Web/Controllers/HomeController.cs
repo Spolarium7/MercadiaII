@@ -63,23 +63,28 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
             });
         }
 
-        public IActionResult About()
+        [HttpGet, Route("home/reset-password/{userId}")]
+        public IActionResult ResetPassword(Guid? userId)
         {
-            ViewData["Message"] = "Your application description page.";
+            var user = this._context.Users.FirstOrDefault(u => u.Id == userId);
 
-            return View();
+            if(user != null)
+            {
+                user.Password = RandomString(8);
+                user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.NeedsToChangePassword;
+                this._context.Users.Update(user);
+                this._context.SaveChanges();
+            }
+
+            return RedirectToAction("index");
         }
 
-        public IActionResult Contact()
+        private Random random = new Random();
+        private string RandomString(int length)
         {
-            ViewData["Message"] = "Your contact page.";
-
-            return View();
-        }
-
-        public IActionResult Privacy()
-        {
-            return View();
+            const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+            return new string(Enumerable.Repeat(chars, length)
+              .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
