@@ -27,5 +27,23 @@
                 }
             }
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3">
+                    <nav aria-label="Page navigation example">
+                        <ul class="pagination">
+                            <li class="page-item"><span class="form-control-plaintext">Page&nbsp;&nbsp;&nbsp;</span></li>
+                            <li class="page-item"><input type="number" value="@Model.Users.CurrentPage" class="form-control" style="width:50px;" onKeydown="javascript: if(event.keyCode == 13 && isNaN(parseInt($(this).val()))==false) window.location='/home/index?pageIndex=' + (isNaN(parseInt($(this).val())) ? 1 : parseInt($(this).val()));" /></li>
+                            <li class="page-item"><span class="form-control-plaintext">&nbsp;&nbsp;&nbsp;of @Model.Users.PageCount&nbsp;&nbsp;&nbsp;</span></li>
+                            <li class="page-item"><a class="page-link" href="#"><span aria-hidden="true">&laquo;</span></a></li>
+                            <li class="page-item"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item"><a class="page-link" href="#"><span aria-hidden="true">&raquo;</span></a></li>
+                        </ul>
+                    </nav>
+                </td>
+            </tr>
+        </tfoot>
     </table>
 </div>
