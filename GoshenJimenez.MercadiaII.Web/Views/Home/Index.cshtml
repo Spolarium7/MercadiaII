@@ -4,12 +4,28 @@
     ViewData["Title"] = "Welcome to Mercadia";
 }
 
-
-<h2>Users</h2>
-<ul>
-    @{foreach(User user in Model.Users)
-        {
-        <li>@user.FullName    @user.Gender.ToString()  @user.EmailAddress</li>
-        }
-        }
-</ul>
+<div class="container">
+    <h2>Users</h2>
+    <p>Here is a paged list of all the users</p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email Address</th>
+                <th>Gender</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                foreach (User user in Model.Users.Items)
+                {
+                    <tr>
+                        <td>@user.FullName</td>
+                        <td>@user.EmailAddress</td>
+                        <td>@user.Gender</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

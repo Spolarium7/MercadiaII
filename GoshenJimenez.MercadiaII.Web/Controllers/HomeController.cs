@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Helpers;
 using GoshenJimenez.MercadiaII.Web.ViewModels.Users;
 using GoshenJimenez.MercadiaII.Web.Models;
+using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Models;
 
 namespace GoshenJimenez.MercadiaII.Web.Controllers
 {
@@ -19,11 +20,46 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
             _context = context;
         }
 
-        public IActionResult Index()
+        public IActionResult Index(int pageSize = 5, int pageIndex = 1, string keyword = "")
         {
+            Page<User> result = new Page<User>();
+
+            if (pageSize < 1)
+            {
+                pageSize = 1;
+            }
+
+            IQueryable<User> userQuery = (IQueryable<User>)this._context.Users;
+
+            if (string.IsNullOrEmpty(keyword) == false)
+            {
+                userQuery = userQuery.Where(u => u.FirstName.Contains(keyword)
+                                            || u.LastName.Contains(keyword)
+                                            || u.EmailAddress.Contains(keyword));
+            }
+
+            long queryCount = userQuery.Count();
+
+            int pageCount = (int)Math.Ceiling((decimal)(queryCount / pageSize));
+            long mod = (queryCount % pageSize);
+
+            if (mod > 0)
+            {
+                pageCount = pageCount + 1;
+            }
+
+            int skip = (int)(pageSize * (pageIndex - 1));
+            List<User> users = userQuery.ToList();
+
+            result.Items = users.Skip(skip).Take((int)pageSize).ToList();
+            result.PageCount = pageCount;
+            result.PageSize = pageSize;
+            result.QueryCount = queryCount;
+            result.CurrentPage = pageIndex;
+
             return View(new IndexViewModel()
             {
-                Users = this._context.Users.ToList()
+                Users = result
             });
         }
 

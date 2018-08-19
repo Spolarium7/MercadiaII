@@ -1,4 +1,5 @@
-﻿using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Models;
+﻿using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Helpers;
+using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,6 @@ namespace GoshenJimenez.MercadiaII.Web.ViewModels.Users
 {
     public class IndexViewModel
     {
-        public List<User> Users { get; set; }
+        public Page<User> Users { get; set; }
     }
 }
