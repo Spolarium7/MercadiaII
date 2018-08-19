@@ -27,7 +27,16 @@
                         <td>
                             <a href="#" onclick="confirmResetPassword()" title="Reset Password"><button type="button" class="btn"><i class="fas fa-key"></i></button></a>
                             <a href="~/home/update-profile?userId=@user.Id" title="Update Profile"><button type="button" class="btn"><i class="fas fa-pen-square"></i></button></a>
-                            <a href="#" onclick="confirmActivateAccount()" title="Activate Account"><button type="button" class="btn"><i class="fas fa-unlock-alt"></i></button></a>
+                            @{
+                                if (user.LoginStatus == GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Enums.LoginStatus.Active)
+                                {
+                                    <a href="#" onclick="confirmDeactivateAccount()" title="Deactivate Account"><button type="button" class="btn"><i class="fas fa-lock"></i></button></a>
+                                }
+                                else
+                                {
+                                    <a href="#" onclick="confirmActivateAccount()" title="Activate Account"><button type="button" class="btn"><i class="fas fa-lock-open"></i></button></a>
+                                }
+                            }
                             <a href="#" onclick="confirmDeleteUser()" title="Delete User"><button type="button" class="btn"><i class="fas fa-times"></i></button></a>
                         </td>
                     </tr>
@@ -54,3 +63,4 @@
         </tfoot>
     </table>
 </div>
+
