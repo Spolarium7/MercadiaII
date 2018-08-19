@@ -8,6 +8,7 @@ using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Helpers;
 using GoshenJimenez.MercadiaII.Web.ViewModels.Users;
 using GoshenJimenez.MercadiaII.Web.Models;
 using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Models;
+using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Enums;
 
 namespace GoshenJimenez.MercadiaII.Web.Controllers
 {
@@ -62,6 +63,23 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
                 Users = result
             });
         }
+
+        [HttpGet, Route("home/change-status/{status}/{userId}")]
+        public IActionResult ChangeStatus(string status, Guid? userId)
+        {
+            var loginStatus = (LoginStatus)Enum.Parse(typeof(LoginStatus), status, true);
+            var user = this._context.Users.FirstOrDefault(u => u.Id == userId);
+
+            if (user != null)
+            {
+                user.LoginStatus = loginStatus;
+                this._context.Users.Update(user);
+                this._context.SaveChanges();
+            }
+
+            return RedirectToAction("index");
+        }
+
 
         [HttpGet, Route("home/reset-password/{userId}")]
         public IActionResult ResetPassword(Guid? userId)
