@@ -119,6 +119,47 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
             return RedirectToAction("index");
         }
 
+        [HttpGet, Route("home/update-profile/{userId}")]
+        public IActionResult UpdateProfile(Guid? userId)
+        {
+            var user = this._context.Users.FirstOrDefault(u => u.Id == userId);
+
+            if (user != null)
+            {
+                return View(
+                    new UpdateProfileViewModel()
+                    {
+                        UserId = userId,
+                        FirstName = user.FirstName,
+                        LastName = user.LastName,
+                        Gender = user.Gender
+                    }                        
+                );
+            }
+
+            return RedirectToAction("create");
+        }
+
+        [HttpPost, Route("home/update-profile")]
+        public IActionResult UpdateProfile(UpdateProfileViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var user = this._context.Users.FirstOrDefault(u => u.Id == model.UserId);
+
+            if (user != null)
+            {
+                user.Gender = model.Gender;
+                user.FirstName = model.FirstName;
+                user.LastName = model.LastName;
+                this._context.Users.Update(user);
+                this._context.SaveChanges();
+            }
+
+            return RedirectToAction("index");
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
