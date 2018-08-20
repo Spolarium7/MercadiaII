@@ -64,6 +64,45 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
             });
         }
 
+
+        [HttpGet, Route("home/create")]
+        public IActionResult Create()
+        {
+            return View();
+        }
+
+        [HttpPost, Route("home/create")]
+        public IActionResult Create(CreateUserViewModel model)
+        {
+            if(!ModelState.IsValid)
+                return RedirectToAction("index");
+
+            if(model.Password != model.ConfirmPassword)
+            {
+                ModelState.AddModelError("","Password does not match Password Confirmation");
+                return View();
+            }
+
+            var user = this._context.Users.FirstOrDefault(u => u.EmailAddress.ToLower() == model.EmailAddress.ToLower());
+
+            if (user == null)
+            {
+                user = new User()
+                {
+                    EmailAddress = model.EmailAddress,
+                    Password = model.Password,
+                    Gender = model.Gender,
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                };
+                this._context.Users.Add(user);
+                this._context.SaveChanges();
+            }
+
+            return RedirectToAction("index");
+        }
+
+
         [HttpGet, Route("home/change-status/{status}/{userId}")]
         public IActionResult ChangeStatus(string status, Guid? userId)
         {
