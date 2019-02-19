@@ -83,6 +83,29 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
 
             return RedirectToAction("Verify");
         }
+        [HttpGet, Route("account/verify")]
+        public IActionResult Verify()
+        {
+            return View();
+        }
+
+        [HttpPost, Route("account/verify")]
+        public IActionResult Verify(VerifyViewModel model)
+        {
+            var user = this._context.Users.FirstOrDefault(u => u.EmailAddress.ToLower() == model.EmailAddress.ToLower() && u.RegistrationCode == model.RegistrationCode);
+
+            if (user != null)
+            {
+                user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                user.LoginTrials = 0;
+                this._context.Users.Update(user);
+                this._context.SaveChanges();
+
+                return RedirectToAction("login");
+            }
+
+            return View();
+        }
 
 
         private Random random = new Random();
