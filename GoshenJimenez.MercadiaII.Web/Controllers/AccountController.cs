@@ -59,7 +59,7 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
                 EmailAddress = model.EmailAddress.ToLower(),
                 FirstName = model.FirstName,
                 LastName = model.LastName,
-                Password = model.Password,
+                Password = BCrypt.BCryptHelper.HashPassword(model.Password, BCrypt.BCryptHelper.GenerateSalt(8)),
                 Gender = model.Gender,
                 LoginStatus = Infrastructure.Data.Enums.LoginStatus.Unverified,
                 LoginTrials = 0,
@@ -73,12 +73,12 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
             //Send email
             this.SendNow(
               "Hi " + model.FirstName + " " + model.LastName + @",
-                             Welcome to CSM Bataan Website. Please use the following registration code to activate your account: " + registrationCode + @".
+                             Welcome to Mercadia II. Please use the following registration code to activate your account: " + registrationCode + @".
                              Regards,
-                             CSM Bataan Website",
+                             Mercadia II",
               model.EmailAddress,
               model.FirstName + " " + model.LastName,
-              "Welcome to CSM Bataan Website!!!"
+              "Welcome to Mercadia II!!!"
             );
 
             return RedirectToAction("Verify");
@@ -114,21 +114,21 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
         }
 
         [HttpPost, Route("account/login")]
-        public IActionResult Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model)
         {
             var user = this._context.Users.FirstOrDefault(u =>
                 u.EmailAddress.ToLower() == model.EmailAddress.ToLower());
 
             if (user != null)
             {
-                if (DevOne.Security.Cryptography.BCrypt.BCryptHelper.CheckPassword(model.Password, user.Password))
+                if (BCrypt.BCryptHelper.CheckPassword(model.Password, user.Password))
                 {
                     if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Locked)
                     {
                         ModelState.AddModelError("", "Your account has been locked please contact an Administrator.");
                         return View();
                     }
-                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.NewRegister)
+                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Unverified)
                     {
                         ModelState.AddModelError("", "Please verify your account first.");
                         return View();

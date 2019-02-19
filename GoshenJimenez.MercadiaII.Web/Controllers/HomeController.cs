@@ -9,17 +9,28 @@ using GoshenJimenez.MercadiaII.Web.ViewModels.Users;
 using GoshenJimenez.MercadiaII.Web.Models;
 using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Models;
 using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Enums;
+using System.Net.Mail;
+using Microsoft.Extensions.Configuration;
+using System.Net;
 
 namespace GoshenJimenez.MercadiaII.Web.Controllers
 {
     public class HomeController : Controller
     {
         private readonly DefaultDbContext _context;
+        protected readonly IConfiguration _config;
+        private string emailUserName;
+        private string emailPassword;
 
-        public HomeController(DefaultDbContext context)
+        public HomeController(DefaultDbContext context, IConfiguration config)
         {
             _context = context;
+            _config = config;
+            var emailConfig = this._config.GetSection("Email");
+            emailUserName = (emailConfig["Username"]).ToString();
+            emailPassword = (emailConfig["Password"]).ToString();
         }
+    
 
         public IActionResult Index(int pageSize = 5, int pageIndex = 1, string keyword = "")
         {
@@ -87,16 +98,32 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
 
             if (user == null)
             {
+                var registrationCode = RandomString(6);
                 user = new User()
                 {
-                    EmailAddress = model.EmailAddress,
-                    Password = model.Password,
-                    Gender = model.Gender,
+                    EmailAddress = model.EmailAddress.ToLower(),
                     FirstName = model.FirstName,
                     LastName = model.LastName,
+                    Password = BCrypt.BCryptHelper.HashPassword(model.Password, BCrypt.BCryptHelper.GenerateSalt(8)),
+                    Gender = model.Gender,
+                    LoginStatus = Infrastructure.Data.Enums.LoginStatus.Unverified,
+                    LoginTrials = 0,
+                    RegistrationCode = registrationCode,
+                    Id = Guid.NewGuid(),
                 };
                 this._context.Users.Add(user);
                 this._context.SaveChanges();
+
+
+                this.SendNow(
+                  "Hi " + model.FirstName + " " + model.LastName + @",
+                                             Welcome to Mercadia II. Please use the following registration code to activate your account: " + registrationCode + @".
+                                             Regards,
+                                             Mercadia II",
+                  model.EmailAddress,
+                  model.FirstName + " " + model.LastName,
+                  "Welcome to Mercadia II!!!"
+                );
             }
 
             return RedirectToAction("index");
@@ -203,6 +230,34 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        private void SendNow(string message, string messageTo, string messageName, string emailSubject)
+        {
+            var fromAddress = new MailAddress(emailUserName, "CSM Bataan Apps");
+            string body = message;
+
+
+            ///https://support.google.com/accounts/answer/6010255?hl=en
+            var smtp = new SmtpClient
+            {
+                Host = "smtp.gmail.com",
+                Port = 587,
+                EnableSsl = true,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(fromAddress.Address, emailPassword),
+                Timeout = 20000
+            };
+
+            var toAddress = new MailAddress(messageTo, messageName);
+
+            smtp.Send(new MailMessage(fromAddress, toAddress)
+            {
+                Subject = emailSubject,
+                Body = body,
+                IsBodyHtml = true
+            });
         }
     }
 }
