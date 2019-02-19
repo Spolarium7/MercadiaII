@@ -107,6 +107,74 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
             return View();
         }
 
+        [HttpGet, Route("account/login")]
+        public IActionResult Login()
+        {
+            return View();
+        }
+
+        [HttpPost, Route("account/login")]
+        public IActionResult Login(LoginViewModel model)
+        {
+            var user = this._context.Users.FirstOrDefault(u =>
+                u.EmailAddress.ToLower() == model.EmailAddress.ToLower());
+
+            if (user != null)
+            {
+                if (DevOne.Security.Cryptography.BCrypt.BCryptHelper.CheckPassword(model.Password, user.Password))
+                {
+                    if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Locked)
+                    {
+                        ModelState.AddModelError("", "Your account has been locked please contact an Administrator.");
+                        return View();
+                    }
+                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.NewRegister)
+                    {
+                        ModelState.AddModelError("", "Please verify your account first.");
+                        return View();
+                    }
+                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.NeedsToChangePassword)
+                    {
+                        user.LoginTrials = 0;
+                        user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                        this._context.Users.Update(user);
+                        this._context.SaveChanges();
+
+                        return RedirectToAction("change-password");
+                    }
+                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Active)
+                    {
+                        user.LoginTrials = 0;
+                        user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                        this._context.Users.Update(user);
+                        this._context.SaveChanges();
+
+                        return RedirectPermanent("/posts/index");
+                    }
+                }
+                else
+                {
+                    user.LoginTrials = user.LoginTrials + 1;
+
+                    if (user.LoginTrials >= 3)
+                    {
+                        ModelState.AddModelError("", "Your account has been locked please contact an Administrator.");
+                        user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Locked;
+                    }
+
+                    this._context.Users.Update(user);
+                    this._context.SaveChanges();
+
+                    ModelState.AddModelError("", "Invalid Login.");
+                    return View();
+                }
+            }
+
+            ModelState.AddModelError("", "Invalid Login.");
+            return View();
+
+        }
+
 
         private Random random = new Random();
         private string RandomString(int length)
