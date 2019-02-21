@@ -14,6 +14,9 @@ using GoshenJimenez.MercadiaII.Web.Infrastructure.Security;
 using RestSharp;
 using Newtonsoft.Json;
 using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Enums;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace GoshenJimenez.MercadiaII.Web.Controllers
 {
@@ -95,7 +98,87 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
             return RedirectToAction("Verify");
         }
 
-        //Register by Facebook
+        [HttpGet, Route("account/login-by-email")]
+        public IActionResult LoginEmail()
+        {
+            return View();
+        }
+
+        [HttpPost, Route("account/login-by-email")]
+        public async Task<IActionResult> LoginEmail(LoginViewModel model)
+        {
+            var user = this._context.Users.FirstOrDefault(u =>
+                u.EmailAddress.ToLower() == model.EmailAddress.ToLower());
+
+            if (user != null)
+            {
+                if (BCrypt.BCryptHelper.CheckPassword(model.Password, user.Password))
+                {
+                    if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Locked)
+                    {
+                        ModelState.AddModelError("", "Your account has been locked please contact an Administrator.");
+                        return View();
+                    }
+                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Unverified)
+                    {
+                        ModelState.AddModelError("", "Please verify your account first.");
+                        return View();
+                    }
+                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.NeedsToChangePassword)
+                    {
+                        user.LoginTrials = 0;
+                        user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                        this._context.Users.Update(user);
+                        this._context.SaveChanges();
+
+                        //SignIn
+                        WebUser.SetUser(user);
+                        await this.SignIn();
+                        return RedirectToAction("change-password");
+                    }
+                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Active)
+                    {
+                        user.LoginTrials = 0;
+                        user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                        this._context.Users.Update(user);
+                        this._context.SaveChanges();
+
+                        //SignIn
+                        WebUser.SetUser(user);
+                        await this.SignIn();
+                        return RedirectPermanent("/account/landing");
+                    }
+                }
+                else
+                {
+                    user.LoginTrials = user.LoginTrials + 1;
+
+                    if (user.LoginTrials >= 3)
+                    {
+                        ModelState.AddModelError("", "Your account has been locked please contact an Administrator.");
+                        user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Locked;
+                    }
+
+                    this._context.Users.Update(user);
+                    this._context.SaveChanges();
+
+                    ModelState.AddModelError("", "Invalid Login.");
+                    return View();
+                }
+            }
+
+            ModelState.AddModelError("", "Invalid Login.");
+            return View();
+
+        }
+
+        [HttpGet, Route("account/landing")]
+        public IActionResult Landing()
+        {
+            return View();
+        }
+
+        //Register or Login by Facebook
         [HttpGet, Route("account/{verb}-by-facebook")]
         public ActionResult AuthFacebook(string verb)
         {
@@ -109,7 +192,7 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
         }
 
         [HttpGet, Route("account/get-facebook-access-token")]
-        public ActionResult GetFacebookAccessToken(string code, string state)
+        public async Task<IActionResult> GetFacebookAccessToken(string code, string state)
         {
             string accessTokenUrl = "https://graph.facebook.com/v2.12/oauth/access_token";
             var client = new RestClient(accessTokenUrl);
@@ -153,6 +236,8 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
                                     this._context.SaveChanges();
 
                                     //SignIn
+                                    WebUser.SetUser(duplicate);
+                                    await this.SignIn();
                                     return RedirectToAction("change-password");
                                 }
                                 else if (duplicate.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Active)
@@ -163,7 +248,9 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
                                     this._context.SaveChanges();
 
                                     //SignIn
-                                    return RedirectPermanent("/posts/index");
+                                    WebUser.SetUser(duplicate);
+                                    await this.SignIn();
+                                    return RedirectPermanent("/account/landing");
                                 }
                             }
 
@@ -213,6 +300,8 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
                                     this._context.SaveChanges();
 
                                     //SignIn
+                                    WebUser.SetUser(user);
+                                    await this.SignIn();
                                     return RedirectToAction("change-password");
                                 }
                                 else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Active)
@@ -223,7 +312,9 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
                                     this._context.SaveChanges();
 
                                     //SignIn
-                                    return RedirectPermanent("/posts/index");
+                                    WebUser.SetUser(user);
+                                    await this.SignIn();
+                                    return RedirectPermanent("/account/landing");
                                 }
                             };
                         };
@@ -234,79 +325,6 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
 
             return View();
         }
-
-
-
-        [HttpGet, Route("account/login")]
-        public IActionResult Login()
-        {
-            return View();
-        }
-
-        [HttpPost, Route("account/login")]
-        public async Task<IActionResult> Login(LoginViewModel model)
-        {
-            var user = this._context.Users.FirstOrDefault(u =>
-                u.EmailAddress.ToLower() == model.EmailAddress.ToLower());
-
-            if (user != null)
-            {
-                if (BCrypt.BCryptHelper.CheckPassword(model.Password, user.Password))
-                {
-                    if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Locked)
-                    {
-                        ModelState.AddModelError("", "Your account has been locked please contact an Administrator.");
-                        return View();
-                    }
-                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Unverified)
-                    {
-                        ModelState.AddModelError("", "Please verify your account first.");
-                        return View();
-                    }
-                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.NeedsToChangePassword)
-                    {
-                        user.LoginTrials = 0;
-                        user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
-                        this._context.Users.Update(user);
-                        this._context.SaveChanges();
-
-                        //SignIn
-                        return RedirectToAction("change-password");
-                    }
-                    else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Active)
-                    {
-                        user.LoginTrials = 0;
-                        user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
-                        this._context.Users.Update(user);
-                        this._context.SaveChanges();
-
-                        //SignIn
-                        return RedirectPermanent("/posts/index");
-                    }
-                }
-                else
-                {
-                    user.LoginTrials = user.LoginTrials + 1;
-
-                    if (user.LoginTrials >= 3)
-                    {
-                        ModelState.AddModelError("", "Your account has been locked please contact an Administrator.");
-                        user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Locked;
-                    }
-
-                    this._context.Users.Update(user);
-                    this._context.SaveChanges();
-
-                    ModelState.AddModelError("", "Invalid Login.");
-                    return View();
-                }
-            }
-
-            ModelState.AddModelError("", "Invalid Login.");
-            return View();
-
-        }
-
 
         [HttpGet, Route("account/verify")]
         public IActionResult Verify()
@@ -330,6 +348,41 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
             }
 
             return View();
+        }
+
+
+        private async Task SignIn()
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, WebUser.UserId.ToString())
+            };
+
+            ClaimsIdentity identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            ClaimsPrincipal principal = new ClaimsPrincipal(identity);
+
+            var authProperties = new AuthenticationProperties
+            {
+                AllowRefresh = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(10),
+                IsPersistent = true,
+                IssuedUtc = DateTimeOffset.UtcNow
+            };
+
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
+        }
+
+        private async Task SignOut()
+        {
+            await HttpContext.SignOutAsync();
+
+            WebUser.EmailAddress = string.Empty;
+            WebUser.FirstName = string.Empty;
+            WebUser.LastName = string.Empty;
+            WebUser.UserId = null;
+
+            HttpContext.Session.Clear();
         }
 
         private Random random = new Random();

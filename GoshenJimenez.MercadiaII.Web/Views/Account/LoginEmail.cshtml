@@ -7,7 +7,7 @@
 
 <div class="row">
     <div class="col-md-6">
-        <form action="~/account/login" method="post">
+        <form action="~/account/login-by-email" method="post">
             @Html.ValidationSummary()
             <div class="form-group">
                 <label for="EmailAddress">EmailAddress:</label>
@@ -17,9 +17,8 @@
                 <label for="Password">Password:</label>
                 <input type="password" class="form-control" name="Password" />
             </div>
-            <button type="submit" class="btn btn-default">Submit</button>
+            <button type="submit" class="btn btn-default">Login</button>
+            <a href="~/account/login-by-facebook" class="btn btn-success">Login by facebook</a>
         </form>
     </div>
 </div>
-
-<a href="~/account/login-by-facebook" class="btn btn-default">Login by facebook</a>
