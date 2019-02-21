@@ -101,7 +101,11 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
         {
             var randomCode = RandomString(6);
             WebUser.SessionCode = randomCode;
-            return Redirect("https://www.facebook.com/v2.12/dialog/oauth?client_id=" + facebookAppId + "&redirect_uri=http://localhost:6100/account/get-facebook-access-token&state=" + verb + "-" + randomCode + "&scope=public_profile,email");
+            return Redirect("https://www.facebook.com/v2.12/dialog/oauth?client_id=" 
+                + facebookAppId 
+                + "&redirect_uri=http://localhost:6100/account/get-facebook-access-token&state=" 
+                + verb + "-" + randomCode 
+                + "&scope=public_profile,email");
         }
 
         [HttpGet, Route("account/get-facebook-access-token")]
@@ -140,8 +144,27 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
 
                             if (duplicate != null)
                             {
-                                ModelState.AddModelError("Account is Existing", "Duplicate account");
-                                return View();
+                                //Login with emailAddress from Facebook
+                                if (duplicate.LoginStatus == Infrastructure.Data.Enums.LoginStatus.NeedsToChangePassword)
+                                {
+                                    duplicate.LoginTrials = 0;
+                                    duplicate.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                                    this._context.Users.Update(duplicate);
+                                    this._context.SaveChanges();
+
+                                    //SignIn
+                                    return RedirectToAction("change-password");
+                                }
+                                else if (duplicate.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Active)
+                                {
+                                    duplicate.LoginTrials = 0;
+                                    duplicate.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                                    this._context.Users.Update(duplicate);
+                                    this._context.SaveChanges();
+
+                                    //SignIn
+                                    return RedirectPermanent("/posts/index");
+                                }
                             }
 
                             var registrationCode = RandomString(6);
@@ -178,7 +201,31 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
                         else if (state.Contains("login"))
                         {
                             //Login with emailAddress from Facebook
+                            User user = this._context.Users.FirstOrDefault(u => u.EmailAddress.ToLower() == facebookUser["email"].ToLower());
 
+                            if(user != null)
+                            {
+                                if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.NeedsToChangePassword)
+                                {
+                                    user.LoginTrials = 0;
+                                    user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                                    this._context.Users.Update(user);
+                                    this._context.SaveChanges();
+
+                                    //SignIn
+                                    return RedirectToAction("change-password");
+                                }
+                                else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Active)
+                                {
+                                    user.LoginTrials = 0;
+                                    user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                                    this._context.Users.Update(user);
+                                    this._context.SaveChanges();
+
+                                    //SignIn
+                                    return RedirectPermanent("/posts/index");
+                                }
+                            };
                         };
                     };
                 }
