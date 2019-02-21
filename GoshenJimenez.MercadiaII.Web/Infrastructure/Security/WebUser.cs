@@ -46,6 +46,12 @@ namespace GoshenJimenez.MercadiaII.Web.Infrastructure.Security
             }
         }
 
+        public static string SessionCode
+        {
+            get => Current.Session.GetString("SessionCode");
+            set => Current.Session.SetString("SessionCode", value);
+        }
+
         public static Guid? UserId
         {
             get => Current.Session.GetObjectFromJson<Guid?>("UserId");

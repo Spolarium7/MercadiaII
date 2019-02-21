@@ -34,13 +34,13 @@ namespace GoshenJimenez.MercadiaII.Web
                 options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             })
-
             .AddCookie(options =>
             {
                 options.Cookie.Expiration = TimeSpan.FromDays(1);
                 options.Cookie.MaxAge = TimeSpan.FromDays(1);
                 options.Cookie.Name = "MercadiaII";
             });
+
 
             services.Configure<CookiePolicyOptions>(options =>
             {
@@ -76,7 +76,9 @@ namespace GoshenJimenez.MercadiaII.Web
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCookiePolicy();
-
+            app.UseSession();
+            app.UseAuthentication();
+            Infrastructure.Security.WebUser.Services = app.ApplicationServices;
             app.UseMvc(routes =>
             {
                 routes.MapRoute(

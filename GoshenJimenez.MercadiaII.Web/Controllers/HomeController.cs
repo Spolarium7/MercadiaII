@@ -234,7 +234,7 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
 
         private void SendNow(string message, string messageTo, string messageName, string emailSubject)
         {
-            var fromAddress = new MailAddress(emailUserName, "CSM Bataan Apps");
+            var fromAddress = new MailAddress(emailUserName, "Mercadia II App");
             string body = message;
 
 

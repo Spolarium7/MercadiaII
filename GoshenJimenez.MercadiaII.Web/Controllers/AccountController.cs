@@ -9,6 +9,11 @@ using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Models;
 using GoshenJimenez.MercadiaII.Web.ViewModels.Account;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
+using GoshenJimenez.MercadiaII.Web.Infrastructure.Security;
+using RestSharp;
+using Newtonsoft.Json;
+using GoshenJimenez.MercadiaII.Web.Infrastructure.Data.Enums;
 
 namespace GoshenJimenez.MercadiaII.Web.Controllers
 {
@@ -18,6 +23,8 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
         protected readonly IConfiguration _config;
         private string emailUserName;
         private string emailPassword;
+        private string facebookAppId;
+        private string facebookAppSecret;
 
         public AccountController(DefaultDbContext context, IConfiguration config)
         {
@@ -26,16 +33,20 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
             var emailConfig = this._config.GetSection("Email");
             emailUserName = (emailConfig["Username"]).ToString();
             emailPassword = (emailConfig["Password"]).ToString();
+            var facebookConfig = this._config.GetSection("Facebook");
+            facebookAppId = (facebookConfig["AppId"]).ToString();
+            facebookAppSecret = (facebookConfig["AppSecret"]).ToString();
         }
 
-        [HttpGet]
-        public IActionResult Register()
+        //Register by Email
+        [HttpGet, Route("account/register-by-email")]
+        public IActionResult RegisterEmail()
         {
             return View();
         }
 
-        [HttpPost]
-        public IActionResult Register(RegisterViewModel model)
+        [HttpPost, Route("account/register-by-email")]
+        public IActionResult RegisterEmail(RegisterViewModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -83,29 +94,101 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
 
             return RedirectToAction("Verify");
         }
-        [HttpGet, Route("account/verify")]
-        public IActionResult Verify()
+
+        //Register by Facebook
+        [HttpGet, Route("account/{verb}-by-facebook")]
+        public ActionResult AuthFacebook(string verb)
         {
-            return View();
+            var randomCode = RandomString(6);
+            WebUser.SessionCode = randomCode;
+            return Redirect("https://www.facebook.com/v2.12/dialog/oauth?client_id=" + facebookAppId + "&redirect_uri=http://localhost:6100/account/get-facebook-access-token&state=" + verb + "-" + randomCode + "&scope=public_profile,email");
         }
 
-        [HttpPost, Route("account/verify")]
-        public IActionResult Verify(VerifyViewModel model)
+        [HttpGet, Route("account/get-facebook-access-token")]
+        public ActionResult GetFacebookAccessToken(string code, string state)
         {
-            var user = this._context.Users.FirstOrDefault(u => u.EmailAddress.ToLower() == model.EmailAddress.ToLower() && u.RegistrationCode == model.RegistrationCode);
+            string accessTokenUrl = "https://graph.facebook.com/v2.12/oauth/access_token";
+            var client = new RestClient(accessTokenUrl);
 
-            if (user != null)
+            //Access Token
+            var request = new RestRequest("", Method.POST);
+            request.AddParameter("code", code);
+            request.AddParameter("redirect_uri", "http://localhost:6100/account/get-facebook-access-token");
+            request.AddParameter("client_id", facebookAppId);
+            request.AddParameter("client_secret", facebookAppSecret);
+
+            IRestResponse response = client.Post(request);
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
-                user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
-                user.LoginTrials = 0;
-                this._context.Users.Update(user);
-                this._context.SaveChanges();
+                var token = JsonConvert.DeserializeObject<Dictionary<string, string>>(response.Content);
 
-                return RedirectToAction("login");
+                //Account Information (Id,FirstName,LastName,EmailAddress //<LinkedIn has no Gender>)
+                client = new RestClient("https://graph.facebook.com/v2.12/me?fields=id,email,first_name,last_name,gender&access_token=" + token["access_token"]);
+                request = new RestRequest("", Method.GET);
+                request.AddHeader("access_token", token["access_token"]);
+
+                response = client.Get(request);
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    var facebookUser = JsonConvert.DeserializeObject<Dictionary<string, string>>(response.Content);
+                    var sessionCode = state.Split('-');
+                    if (sessionCode[1].ToString() == WebUser.SessionCode)
+                    {
+                        if (state.Contains("register"))
+                        {
+                            var duplicate = this._context.Users.FirstOrDefault(u => u.EmailAddress.ToLower() == facebookUser["email"].ToLower());
+
+                            if (duplicate != null)
+                            {
+                                ModelState.AddModelError("Account is Existing", "Duplicate account");
+                                return View();
+                            }
+
+                            var registrationCode = RandomString(6);
+                            var otp = RandomString(8);
+                            User user = new User()
+                            {
+                                EmailAddress = facebookUser["email"].ToLower(),
+                                FirstName = facebookUser["first_name"],
+                                LastName = facebookUser["last_name"],
+                                Password = BCrypt.BCryptHelper.HashPassword(otp, BCrypt.BCryptHelper.GenerateSalt(8)),
+                                Gender = (facebookUser.ContainsKey("gender") ? (facebookUser["gender"].ToLower() == "female" ? Gender.Female : Gender.Male) : Gender.Male),
+                                LoginStatus = Infrastructure.Data.Enums.LoginStatus.NeedsToChangePassword,
+                                LoginTrials = 0,
+                                RegistrationCode = registrationCode,
+                                Id = Guid.NewGuid(),
+                            };
+
+                            this._context.Users.Add(user);
+                            this._context.SaveChanges();
+
+                            //Send email
+                            this.SendNow(
+                              "Hi " + facebookUser["first_name"] + " " + facebookUser["last_name"] + @",
+                             Welcome to Mercadia II. Please use this one-time password to login to your account: " + otp + @".
+                             Regards,
+                             Mercadia II",
+                              facebookUser["email"].ToLower(),
+                              facebookUser["first_name"] + " " + facebookUser["last_name"],
+                              "Welcome to Mercadia II!!!"
+                            );
+
+                            return RedirectToAction("login");
+                        }
+                        else if (state.Contains("login"))
+                        {
+                            //Login with emailAddress from Facebook
+
+                        };
+                    };
+                }
+
             }
 
             return View();
         }
+
+
 
         [HttpGet, Route("account/login")]
         public IActionResult Login()
@@ -140,6 +223,7 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
                         this._context.Users.Update(user);
                         this._context.SaveChanges();
 
+                        //SignIn
                         return RedirectToAction("change-password");
                     }
                     else if (user.LoginStatus == Infrastructure.Data.Enums.LoginStatus.Active)
@@ -149,6 +233,7 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
                         this._context.Users.Update(user);
                         this._context.SaveChanges();
 
+                        //SignIn
                         return RedirectPermanent("/posts/index");
                     }
                 }
@@ -176,6 +261,30 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
         }
 
 
+        [HttpGet, Route("account/verify")]
+        public IActionResult Verify()
+        {
+            return View();
+        }
+
+        [HttpPost, Route("account/verify")]
+        public IActionResult Verify(VerifyViewModel model)
+        {
+            var user = this._context.Users.FirstOrDefault(u => u.EmailAddress.ToLower() == model.EmailAddress.ToLower() && u.RegistrationCode == model.RegistrationCode);
+
+            if (user != null)
+            {
+                user.LoginStatus = Infrastructure.Data.Enums.LoginStatus.Active;
+                user.LoginTrials = 0;
+                this._context.Users.Update(user);
+                this._context.SaveChanges();
+
+                return RedirectToAction("login");
+            }
+
+            return View();
+        }
+
         private Random random = new Random();
         private string RandomString(int length)
         {
@@ -186,11 +295,9 @@ namespace GoshenJimenez.MercadiaII.Web.Controllers
 
         private void SendNow(string message, string messageTo, string messageName, string emailSubject)
         {
-            var fromAddress = new MailAddress(emailUserName, "CSM Bataan Apps");
+            var fromAddress = new MailAddress(emailUserName, "Mercadia II App");
             string body = message;
 
-
-            ///https://support.google.com/accounts/answer/6010255?hl=en
             var smtp = new SmtpClient
             {
                 Host = "smtp.gmail.com",
